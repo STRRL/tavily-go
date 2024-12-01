@@ -53,13 +53,68 @@ type SearchResponse struct {
 	ResponseTime      float64        `json:"response_time"`
 }
 
-func (c *Client) Search(ctx context.Context, query string) (*SearchResponse, error) {
-	searchRequest := SearchRequest{
-		Query:         query,
-		APIKey:        c.APIKey,
-		IncludeAnswer: true,
-		MaxResults:    5,
+// SearchOption is a function that modifies SearchRequest
+type SearchOption func(*SearchRequest)
+
+// WithIncludeAnswer sets the IncludeAnswer field
+func WithIncludeAnswer(include bool) SearchOption {
+	return func(sr *SearchRequest) {
+		sr.IncludeAnswer = include
 	}
+}
+
+// WithMaxResults sets the MaxResults field
+func WithMaxResults(max int) SearchOption {
+	return func(sr *SearchRequest) {
+		sr.MaxResults = max
+	}
+}
+
+// WithSearchDepth sets the SearchDepth field
+func WithSearchDepth(depth string) SearchOption {
+	return func(sr *SearchRequest) {
+		sr.SearchDepth = depth
+	}
+}
+
+// WithTopic sets the Topic field
+func WithTopic(topic string) SearchOption {
+	return func(sr *SearchRequest) {
+		sr.Topic = topic
+	}
+}
+
+// WithIncludeRawContent sets the IncludeRawContent field
+func WithIncludeRawContent(include bool) SearchOption {
+	return func(sr *SearchRequest) {
+		sr.IncludeRawContent = include
+	}
+}
+
+// WithIncludeImages sets the IncludeImages field
+func WithIncludeImages(include bool) SearchOption {
+	return func(sr *SearchRequest) {
+		sr.IncludeImages = include
+	}
+}
+
+// WithIncludeDomains sets the IncludeDomains field
+func WithIncludeDomains(domains []string) SearchOption {
+	return func(sr *SearchRequest) {
+		sr.IncludeDomains = domains
+	}
+}
+
+func (c *Client) SearchWithOptions(ctx context.Context, query string, opts ...SearchOption) (*SearchResponse, error) {
+	searchRequest := SearchRequest{
+		Query:  query,
+		APIKey: c.APIKey,
+	}
+
+	for _, opt := range opts {
+		opt(&searchRequest)
+	}
+
 	searchRequestJSON, err := json.Marshal(searchRequest)
 	if err != nil {
 		return nil, fmt.Errorf("tavily client search, marshal search request: %w", err)
@@ -90,4 +145,11 @@ func (c *Client) Search(ctx context.Context, query string) (*SearchResponse, err
 	}
 
 	return &result, nil
+}
+
+func (c *Client) Search(ctx context.Context, query string) (*SearchResponse, error) {
+	return c.SearchWithOptions(ctx, query,
+		WithIncludeAnswer(true),
+		WithMaxResults(5),
+	)
 }
